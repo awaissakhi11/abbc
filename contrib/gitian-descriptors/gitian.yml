@@ -1,5 +1,5 @@
 ---
-name: "funcoin"
+name: "abbc"
 suites:
 - "lucid"
 architectures:
@@ -20,8 +20,8 @@ packages:
 - "libpng12-dev"
 reference_datetime: "2011-01-30 00:00:00"
 remotes:
-- "url": "https://github.com/awaissakhi11/funcoin.git"
-  "dir": "funcoin"
+- "url": "https://github.com/awaissakhi11/abbc.git"
+  "dir": "abbc"
 files:
 - "miniupnpc-1.9.20140401.tar.gz"
 - "qrencode-3.4.3.tar.bz2"
@@ -43,7 +43,7 @@ script: |
   make $MAKEOPTS install
   cd ..
   #
-  cd funcoin
+  cd abbc
   mkdir -p $OUTDIR/src
   git archive HEAD | tar -x -C $OUTDIR/src
   cp $OUTDIR/src/doc/README.md $OUTDIR
