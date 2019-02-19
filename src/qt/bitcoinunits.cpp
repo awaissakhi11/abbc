@@ -1,7 +1,3 @@
-// Copyright (c) 2011-2013 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
 #include "bitcoinunits.h"
 
 #include <QStringList>
@@ -38,9 +34,9 @@ QString BitcoinUnits::name(int unit)
 {
     switch(unit)
     {
-    case BTC: return QString("FUN");
-    case mBTC: return QString("mFUN");
-    case uBTC: return QString::fromUtf8("μFUN");
+    case BTC: return QString("ABBC");
+    case mBTC: return QString("mABBC");
+    case uBTC: return QString::fromUtf8("μPABBC");
     default: return QString("???");
     }
 }
@@ -49,9 +45,9 @@ QString BitcoinUnits::description(int unit)
 {
     switch(unit)
     {
-    case BTC: return QString("Funcoins");
-    case mBTC: return QString("Milli-Funcoins (1 / 1,000)");
-    case uBTC: return QString("Micro-Funcoins (1 / 1,000,000)");
+    case BTC: return QString("ABBCCoins");
+    case mBTC: return QString("Milli-ABBCCoins (1 / 1,000)");
+    case uBTC: return QString("Micro-ABBCCoins (1 / 1,000,000)");
     default: return QString("???");
     }
 }
@@ -107,6 +103,32 @@ QString BitcoinUnits::format(int unit, qint64 n, bool fPlus)
     int nTrim = 0;
     for (int i = remainder_str.size()-1; i>=2 && (remainder_str.at(i) == '0'); --i)
         ++nTrim;
+    remainder_str.chop(nTrim);
+
+    if (n < 0)
+        quotient_str.insert(0, '-');
+    else if (fPlus && n > 0)
+        quotient_str.insert(0, '+');
+    return quotient_str + QString(".") + remainder_str;
+}
+
+QString BitcoinUnits::formatAge(int unit, qint64 n, bool fPlus)
+{
+    // Note: not using straight sprintf here because we do NOT want
+    // localized number formatting.
+    if(!valid(unit))
+        return QString(); // Refuse to format invalid unit
+    qint64 coin = factor(unit);
+    int num_decimals = decimals(unit);
+    qint64 n_abs = (n > 0 ? n : -n);
+    qint64 quotient = n_abs / coin;
+    qint64 remainder = n_abs % coin;
+    QString quotient_str = QString::number(quotient);
+    QString remainder_str = QString::number(remainder).rightJustified(num_decimals, '0');
+
+    // Right-trim excess zeros after the decimal point
+    int nTrim = 3;
+    
     remainder_str.chop(nTrim);
 
     if (n < 0)

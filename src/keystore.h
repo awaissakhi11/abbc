@@ -1,5 +1,6 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2009-2015 Satoshi Nakamoto
+// Copyright (c) 2009-2015 The Bitcoin developers
+// Copyright (c) 2015 The ABBCCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_KEYSTORE_H
@@ -21,8 +22,7 @@ public:
     virtual ~CKeyStore() {}
 
     // Add a key to the store.
-    virtual bool AddKeyPubKey(const CKey &key, const CPubKey &pubkey) =0;
-    virtual bool AddKey(const CKey &key);
+    virtual bool AddKey(const CKey& key) =0;
 
     // Check whether a key corresponding to a given address is present in the store.
     virtual bool HaveKey(const CKeyID &address) const =0;
@@ -34,20 +34,35 @@ public:
     virtual bool AddCScript(const CScript& redeemScript) =0;
     virtual bool HaveCScript(const CScriptID &hash) const =0;
     virtual bool GetCScript(const CScriptID &hash, CScript& redeemScriptOut) const =0;
+    virtual bool AddWatchOnly(const CScript &dest) =0;
+    virtual bool RemoveWatchOnly(const CScript &dest) =0;
+    virtual bool HaveWatchOnly(const CScript &dest) const =0;
+    virtual bool HaveWatchOnly() const =0;
+
+    virtual bool GetSecret(const CKeyID &address, CSecret& vchSecret, bool &fCompressed) const
+    {
+        CKey key;
+        if (!GetKey(address, key))
+            return false;
+        vchSecret = key.GetSecret(fCompressed);
+        return true;
+    }
 };
 
-typedef std::map<CKeyID, CKey> KeyMap;
+typedef std::map<CKeyID, std::pair<CSecret, bool> > KeyMap;
 typedef std::map<CScriptID, CScript > ScriptMap;
-
+typedef std::set<CScript> WatchOnlySet;
 /** Basic key store, that keeps keys in an address->secret map */
 class CBasicKeyStore : public CKeyStore
 {
 protected:
     KeyMap mapKeys;
     ScriptMap mapScripts;
+    WatchOnlySet setWatchOnly;
+
 
 public:
-    bool AddKeyPubKey(const CKey& key, const CPubKey &pubkey);
+    bool AddKey(const CKey& key);
     bool HaveKey(const CKeyID &address) const
     {
         bool result;
@@ -77,7 +92,8 @@ public:
             KeyMap::const_iterator mi = mapKeys.find(address);
             if (mi != mapKeys.end())
             {
-                keyOut = mi->second;
+                keyOut.Reset();
+                keyOut.SetSecret((*mi).second.first, (*mi).second.second);
                 return true;
             }
         }
@@ -86,6 +102,10 @@ public:
     virtual bool AddCScript(const CScript& redeemScript);
     virtual bool HaveCScript(const CScriptID &hash) const;
     virtual bool GetCScript(const CScriptID &hash, CScript& redeemScriptOut) const;
+    virtual bool AddWatchOnly(const CScript &dest);
+    virtual bool RemoveWatchOnly(const CScript &dest);
+    virtual bool HaveWatchOnly(const CScript &dest) const;
+    virtual bool HaveWatchOnly() const;
 };
 
 typedef std::map<CKeyID, std::pair<CPubKey, std::vector<unsigned char> > > CryptedKeyMap;
@@ -137,7 +157,7 @@ public:
     bool Lock();
 
     virtual bool AddCryptedKey(const CPubKey &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret);
-    bool AddKeyPubKey(const CKey& key, const CPubKey &pubkey);
+    bool AddKey(const CKey& key);
     bool HaveKey(const CKeyID &address) const
     {
         {
